@@ -181,7 +181,7 @@ coloredlogs==15.0.1 \
     # via
     #   -r requirements.in
     #   envoy.base.runner
-coverage==6.0 \
+coverage[toml]==6.0 \
     --hash=sha256:08fd55d2e00dac4c18a2fa26281076035ec86e764acdc198b9185ce749ada58f \
     --hash=sha256:11ce082eb0f7c2bbfe96f6c8bcc3a339daac57de4dc0f3186069ec5c58da911c \
     --hash=sha256:17983f6ccc47f4864fd16d20ff677782b23d1207bf222d10e4d676e4636b0872 \
@@ -331,9 +331,9 @@ flake8-polyfill==1.0.2 \
     --hash=sha256:12be6a34ee3ab795b19ca73505e7b55826d5f6ad7230d31b18e106400169b9e9 \
     --hash=sha256:e44b087597f6da52ec6393a709e7108b2905317d0c0b744cdca6208e670d8eda
     # via pep8-naming
-frozendict==2.0.6 \
-    --hash=sha256:3f00de72805cf4c9e81b334f3f04809278b967d2fed84552313a0fcce511beb1 \
-    --hash=sha256:5d3f75832c35d4df041f0e19c268964cbef29c1eb34cd3517cf883f1c2d089b9
+frozendict==2.0.7 \
+    --hash=sha256:a68f609d1af67da80b45519fdcfca2d60249c0a8c96e68279c1b6ddd92128204 \
+    --hash=sha256:d650f9cf3d2c5438b1631488a975a49b3bdd12c7a97eec59b85e57821eebf28a
     # via
     #   -r requirements.in
     #   envoy.base.runner
@@ -711,9 +711,11 @@ sphinxext-rediraffe==0.2.7 \
 toml==0.10.2 \
     --hash=sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b \
     --hash=sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f
-    # via
-    #   coverage
-    #   pytest
+    # via pytest
+tomli==1.2.1 \
+    --hash=sha256:8dd0e9524d6f386271a36b41dbf6c57d8e32fd96fd22b6584679dc569d20899f \
+    --hash=sha256:a5b75cb6f3968abb47af1b40c1819dc519ea82bcc065776a866e8d74c5ca9442
+    # via coverage
 trycast==0.3.0 \
     --hash=sha256:1b7b4c0d4b0d674770a53f34a762e52a6cd6879eb251ab21625602699920080d \
     --hash=sha256:687185b812e8d1c45f2ba841e8de7bdcdee0695dcf3464f206800505d4c65f26
