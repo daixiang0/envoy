@@ -32,6 +32,12 @@ EXTENSIONS = {
     "envoy.compression.zstd.decompressor":              "//source/extensions/compression/zstd/decompressor:config",
 
     #
+    # Connection balancers
+    #
+
+    "envoy.network.connection_balance.exact": "//source/extensions/common/network:config",
+
+    #
     # Config validators
     #
 
