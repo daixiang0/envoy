@@ -26,9 +26,14 @@ envoy_cc_contrib_extension(
         "connection_balancer_impl.cc",
     ],
     hdrs = ["connection_balancer_impl.h"],
+    defines = select({
+        "//bazel:linux_x86_64": [],
+        "//conditions:default": [
+            "DLB_DISABLED=1",
+        ],
+    }),
     visibility = ["//visibility:public"],
     deps = [
-        ":dlb",
         "//envoy/registry",
         "//envoy/server:factory_context_interface",
         "//envoy/server:filter_config_interface",
@@ -37,5 +42,11 @@ envoy_cc_contrib_extension(
         "//source/common/protobuf:utility_lib",
         "//source/server:active_tcp_listener",
         "@envoy_api//contrib/envoy/extensions/dlb/v3alpha:pkg_cc_proto",
-    ],
+    ] + select({
+        "//bazel:linux_x86_64": [
+            ":dlb",
+        ],
+        "//conditions:default": [
+        ],
+    }),
 )
