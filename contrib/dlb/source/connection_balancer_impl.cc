@@ -146,7 +146,6 @@ DLBConnectionBalanceFactory::createConnectionBalancerFromProto(
     ExceptionUtil::throwEnvoyException(
         fmt::format("dlb_start_sched_domain {}", errorDetails(errno)));
   }
-#endif
 
   DlbConnectionBalanceFactorySingleton::initialize(this);
 
