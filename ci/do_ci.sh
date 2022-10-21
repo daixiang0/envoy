@@ -357,7 +357,7 @@ elif [[ "$CI_TARGET" == "bazel.dev.contrib" ]]; then
   # This doesn't go into CI but is available for developer convenience.
   echo "bazel fastbuild build with contrib extensions and tests..."
   echo "Building..."
-  bazel_contrib_binary_build fastbuild
+  bazel_contrib_binary_build release
   exit 0
 elif [[ "$CI_TARGET" == "bazel.compile_time_options" ]]; then
   # Right now, none of the available compile-time options conflict with each other. If this

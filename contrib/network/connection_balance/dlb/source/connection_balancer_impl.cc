@@ -247,7 +247,7 @@ void DlbBalancedConnectionHandlerImpl::post(Network::ConnectionSocketPtr&& socke
   events[0].adv_send.udata64 = reinterpret_cast<std::uintptr_t>(s);
   int ret = dlb_send(DlbConnectionBalanceFactorySingleton::get().tx_ports[index_], 1, &events[0]);
   if (ret != 1) {
-    ENVOY_LOG(error, "{} dlb fail send {}", name_, errorDetails(errno));
+    ENVOY_LOG(error, "{} dlb fail send, errono: {}, info: {}", name_, errno, errorDetails(errno));
   } else {
     ENVOY_LOG(debug, "{} dlb send fd {}", name_, s->ioHandle().fdDoNotUse());
   }
