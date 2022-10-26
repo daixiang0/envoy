@@ -247,7 +247,19 @@ void DlbBalancedConnectionHandlerImpl::post(Network::ConnectionSocketPtr&& socke
   events[0].adv_send.udata64 = reinterpret_cast<std::uintptr_t>(s);
   int ret = dlb_send(DlbConnectionBalanceFactorySingleton::get().tx_ports[index_], 1, &events[0]);
   if (ret != 1) {
-    ENVOY_LOG(error, "{} dlb fail send, errono: {}, info: {}", name_, errno, errorDetails(errno));
+    for (int j = 0; j < 100; j++) {
+      ENVOY_LOG(warn, "{} dlb fail send, start retry, errono: {}", name_, errno);
+      ret = dlb_send(DlbConnectionBalanceFactorySingleton::get().tx_ports[index_], 1, &events[0]);
+      if (ret == 1) {
+        ENVOY_LOG(warn, "{} dlb fail send, end retry: {}", name_, j + 1);
+        break;
+      }
+    }
+    if (ret != 1) {
+      ENVOY_LOG(error, "{} dlb fail send with 10 retry, errono: {}, info: {}", name_, errno,
+                errorDetails(errno));
+    }
+
   } else {
     ENVOY_LOG(debug, "{} dlb send fd {}", name_, s->ioHandle().fdDoNotUse());
   }
