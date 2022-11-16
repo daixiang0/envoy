@@ -117,7 +117,7 @@ void TcpListenerImpl::enable() {
 
 void TcpListenerImpl::disable() {
   if (bind_to_port_) {
-    socket_->ioHandle().enableFileEvents(0);
+    socket_->close();
   } else {
     ENVOY_LOG_MISC(debug, "The listener cannot be disable since it's not bind to port.");
   }

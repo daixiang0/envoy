@@ -320,6 +320,10 @@ void DlbConnectionBalancerImpl::registerHandler(
       std::make_shared<DlbBalancedConnectionHandlerImpl>(handler, index, worker_name);
   dlb_handler->setDlbEvent();
 
+  if (index == 0) {
+    listener->listener()->disable();
+  }
+
   DlbConnectionBalanceFactorySingleton::get().dlb_handlers.push_back(dlb_handler);
 }
 
