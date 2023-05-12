@@ -29,9 +29,9 @@ DlbConnectionBalanceFactory::createConnectionBalancerFromProto(
 
   const uint32_t worker_num = context.options().concurrency();
 
-  if (worker_num > 32) {
+  if (worker_num > 64) {
     ExceptionUtil::throwEnvoyException(
-        "Dlb connection balanncer only supports up to 32 worker threads, "
+        "Dlb connection balanncer only supports up to 64 worker threads, "
         "please decrease the number of threads by `--concurrency`");
   }
 
@@ -74,13 +74,13 @@ DlbConnectionBalanceFactory::createConnectionBalancerFromProto(
             rsrcs.num_ldb_event_state_entries, rsrcs.max_contiguous_ldb_event_state_entries,
             rsrcs.num_ldb_credits, rsrcs.max_contiguous_ldb_credits, rsrcs.num_ldb_credit_pools);
 
-  if (rsrcs.num_ldb_ports < 2 * worker_num) {
+  if (rsrcs.num_ldb_ports < worker_num) {
     ExceptionUtil::throwEnvoyException(
-        fmt::format("no available dlb port resources, request: {}, available: {}", 2 * worker_num,
+        fmt::format("no available dlb port resources, request: {}, available: {}", worker_num,
                     rsrcs.num_ldb_ports));
   }
 
-  domain_id = createSchedDomain(dlb, rsrcs, cap, 2 * worker_num);
+  domain_id = createSchedDomain(dlb, rsrcs, cap, worker_num);
   if (domain_id == -1) {
     ExceptionUtil::throwEnvoyException(
         fmt::format("dlb_create_sched_domain_ {}", errorDetails(errno)));
@@ -121,39 +121,26 @@ DlbConnectionBalanceFactory::createConnectionBalancerFromProto(
     }
   }
 
-  tx_queue_id = createLdbQueue(domain);
-  if (tx_queue_id == -1) {
+  queue_id = createLdbQueue(domain);
+  if (queue_id == -1) {
     ExceptionUtil::throwEnvoyException(fmt::format("tx create_ldb_queue {}", errorDetails(errno)));
   }
 
   for (uint i = 0; i < worker_num; i++) {
-    int tx_port_id = createLdbPort(domain, cap, ldb_pool_id, dir_pool_id);
-    if (tx_port_id == -1) {
+    int port_id = createLdbPort(domain, cap, ldb_pool_id, dir_pool_id);
+    if (port_id == -1) {
       ExceptionUtil::throwEnvoyException(
-          fmt::format("tx dlb_create_ldb_port {}", errorDetails(errno)));
+          fmt::format("dlb_create_ldb_port {}", errorDetails(errno)));
     }
 
-    dlb_port_hdl_t tx_port = dlb_attach_ldb_port(domain, tx_port_id);
-    if (tx_port == nullptr) {
+    dlb_port_hdl_t port = dlb_attach_ldb_port(domain, port_id);
+    if (port == nullptr) {
       ExceptionUtil::throwEnvoyException(
-          fmt::format("tx dlb_attach_ldb_port {}", errorDetails(errno)));
+          fmt::format("dlb_attach_ldb_port {}", errorDetails(errno)));
     }
-    tx_ports.push_back(tx_port);
+    ports.push_back(port);
 
-    int rx_port_id = createLdbPort(domain, cap, ldb_pool_id, dir_pool_id);
-    if (rx_port_id == -1) {
-      ExceptionUtil::throwEnvoyException(
-          fmt::format("rx dlb_create_ldb_port {}", errorDetails(errno)));
-    }
-
-    dlb_port_hdl_t rx_port = dlb_attach_ldb_port(domain, rx_port_id);
-    if (rx_port == nullptr) {
-      ExceptionUtil::throwEnvoyException(
-          fmt::format("rx dlb_attach_ldb_port {}", errorDetails(errno)));
-    }
-    rx_ports.push_back(rx_port);
-
-    if (dlb_link_queue(rx_port, tx_queue_id, 0) == -1) {
+    if (dlb_link_queue(port, queue_id, 0) == -1) {
       ExceptionUtil::throwEnvoyException(fmt::format("dlb_link_queue {}", errorDetails(errno)));
     }
 
@@ -161,7 +148,7 @@ DlbConnectionBalanceFactory::createConnectionBalancerFromProto(
     if (efd < 0) {
       ExceptionUtil::throwEnvoyException(fmt::format("dlb eventfd {}", errorDetails(errno)));
     }
-    if (dlb_enable_cq_epoll(rx_port, true, efd)) {
+    if (dlb_enable_cq_epoll(port, true, efd)) {
       ExceptionUtil::throwEnvoyException(
           fmt::format("dlb_enable_cq_epoll {}", errorDetails(errno)));
     }
@@ -186,15 +173,7 @@ DlbConnectionBalanceFactory::createConnectionBalancerFromProto(
 DlbConnectionBalanceFactory::~DlbConnectionBalanceFactory() {
 #ifndef DLB_DISABLED
   if (dlb != nullptr) {
-    for (dlb_port_hdl_t port : rx_ports) {
-      if (dlb_disable_port(port)) {
-        ENVOY_LOG(error, "dlb_disable_port {}", errorDetails(errno));
-      }
-      if (dlb_detach_port(port) == -1) {
-        ENVOY_LOG(error, "dlb_detach_port {}", errorDetails(errno));
-      }
-    }
-    for (dlb_port_hdl_t port : tx_ports) {
+    for (dlb_port_hdl_t port : ports) {
       if (dlb_disable_port(port)) {
         ENVOY_LOG(error, "dlb_disable_port {}", errorDetails(errno));
       }
@@ -243,16 +222,16 @@ void DlbBalancedConnectionHandlerImpl::post(Network::ConnectionSocketPtr&& socke
   // The pointer will be casted to unique_ptr in onDlbEvents(), no need to consider free.
   auto s = socket.release();
   dlb_event_t events[1];
-  events[0].send.queue_id = DlbConnectionBalanceFactorySingleton::get().tx_queue_id;
+  events[0].send.queue_id = DlbConnectionBalanceFactorySingleton::get().queue_id;
   events[0].send.sched_type = SCHED_UNORDERED;
   events[0].adv_send.udata64 = reinterpret_cast<std::uintptr_t>(s);
-  int ret = dlb_send(DlbConnectionBalanceFactorySingleton::get().tx_ports[index_], 1, &events[0]);
+  int ret = dlb_send(DlbConnectionBalanceFactorySingleton::get().ports[index_], 1, &events[0]);
   if (ret != 1) {
     if (DlbConnectionBalanceFactorySingleton::get().max_retries > 0) {
       uint i = 0;
       while (i < DlbConnectionBalanceFactorySingleton::get().max_retries) {
         ENVOY_LOG(debug, "{} dlb_send fail, start retry, errono: {}", name_, errno);
-        ret = dlb_send(DlbConnectionBalanceFactorySingleton::get().tx_ports[index_], 1, &events[0]);
+        ret = dlb_send(DlbConnectionBalanceFactorySingleton::get().ports[index_], 1, &events[0]);
         if (ret == 1) {
           ENVOY_LOG(warn, "{} dlb_send retry {} times and succeed", name_, i + 1);
           break;
@@ -287,8 +266,8 @@ void DlbBalancedConnectionHandlerImpl::onDlbEvents(uint32_t flags) {
   throw EnvoyException("X86_64 architecture is required for Dlb.");
 #else
   dlb_event_t dlb_events[32];
-  int num_rx = dlb_recv(DlbConnectionBalanceFactorySingleton::get().rx_ports.at(index_), 32, false,
-                        dlb_events);
+  int num_rx =
+      dlb_recv(DlbConnectionBalanceFactorySingleton::get().ports.at(index_), 32, false, dlb_events);
   if (num_rx == 0) {
     ENVOY_LOG(debug, "{} dlb receive none, skip", name_);
     return;
@@ -296,7 +275,7 @@ void DlbBalancedConnectionHandlerImpl::onDlbEvents(uint32_t flags) {
     ENVOY_LOG(debug, "{} get dlb event {}", name_, num_rx);
   }
 
-  int ret = dlb_release(DlbConnectionBalanceFactorySingleton::get().rx_ports.at(index_), num_rx);
+  int ret = dlb_release(DlbConnectionBalanceFactorySingleton::get().ports.at(index_), num_rx);
   if (ret != num_rx) {
     ENVOY_LOG(debug, "{} dlb release {}", name_, errorDetails(errno));
   }

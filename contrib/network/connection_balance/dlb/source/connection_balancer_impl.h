@@ -93,14 +93,14 @@ public:
   std::string name() const override { return "envoy.network.connection_balance.dlb"; }
 
   // Init those only when Envoy start.
-  int domain_id, ldb_pool_id, dir_pool_id, tx_queue_id;
+  int domain_id, ldb_pool_id, dir_pool_id, queue_id;
 #ifndef DLB_DISABLED
   dlb_domain_hdl_t domain;
   dlb_hdl_t dlb;
   dlb_dev_cap_t cap;
 
   // Share those cross worker threads.
-  std::vector<dlb_port_hdl_t> tx_ports, rx_ports;
+  std::vector<dlb_port_hdl_t> ports;
   uint max_retries;
 #endif
   std::vector<int> efds;
