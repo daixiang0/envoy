@@ -220,6 +220,7 @@ void DlbBalancedConnectionHandlerImpl::post(Network::ConnectionSocketPtr&& socke
   throw EnvoyException("X86_64 architecture is required for Dlb.");
 #else
   // The pointer will be casted to unique_ptr in onDlbEvents(), no need to consider free.
+  auto debug_info = fmt::ptr(&socket->ioHandle());
   auto s = socket.release();
   dlb_event_t events[1];
   events[0].send.queue_id = DlbConnectionBalanceFactorySingleton::get().queue_id;
@@ -255,7 +256,7 @@ void DlbBalancedConnectionHandlerImpl::post(Network::ConnectionSocketPtr&& socke
     }
 
   } else {
-    ENVOY_LOG(debug, "{} dlb send fd {}", name_, s->ioHandle().fdDoNotUse());
+    ENVOY_LOG(warn, "{} dlb send fd {} {}", name_, s->ioHandle().fdDoNotUse(), debug_info);
   }
 #endif
 }
@@ -289,7 +290,8 @@ void DlbBalancedConnectionHandlerImpl::onDlbEvents(uint32_t flags) {
       const uint64_t data = dlb_events[i].recv.udata64;
       auto socket = reinterpret_cast<Network::ConnectionSocket*>(data);
 
-      ENVOY_LOG(debug, "{} dlb recv {}", name_, socket->ioHandle().fdDoNotUse());
+      ENVOY_LOG(warn, "{} dlb recv {} {}", name_, socket->ioHandle().fdDoNotUse(),
+                fmt::ptr(&socket->ioHandle()));
       auto listener = dynamic_cast<Envoy::Server::ActiveTcpListener*>(&handler_);
       auto active_socket = std::make_unique<Envoy::Server::ActiveTcpSocket>(
           *listener, std::unique_ptr<Network::ConnectionSocket>(socket),

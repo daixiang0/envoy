@@ -587,8 +587,8 @@ Address::InstanceConstSharedPtr IoSocketHandleImpl::peerAddress() {
 
 void IoSocketHandleImpl::initializeFileEvent(Event::Dispatcher& dispatcher, Event::FileReadyCb cb,
                                              Event::FileTriggerType trigger, uint32_t events) {
-  ASSERT(file_event_ == nullptr, "Attempting to initialize two `file_event_` for the same "
-                                 "file descriptor. This is not allowed.");
+  ASSERT(file_event_ == nullptr, fmt::format("Attempting to initialize two `file_event_` for the same "
+                                 "file descriptor {} {}. This is not allowed.", fd_, fmt::ptr(this)));
   file_event_ = dispatcher.createFileEvent(fd_, cb, trigger, events);
 }
 
